@@ -1,130 +1,134 @@
 #include <iostream>
+#include <vector>
 #include <string>
 #include <ctime>
-#include <vector>
 
 class Branch {
-    Branch* parent;
-    Branch** branches;
-    int numBranches;
-    std::string elf;
+    Branch* parentBranch;
+    std::vector<Branch*> subBranches;
+    std::string name;
 
 public:
-    Branch(Branch* p, int num) : parent(p), numBranches(num), elf("") {
-        branches = new Branch*[numBranches];
-        for (int i = 0; i < numBranches; ++i) {
-            branches[i] = new Branch(this, rand() % 2 + 2); // Генерация от 2 до 3 средних ветвей на каждой большой ветви
-        }
-    }
+    Branch(const std::string& n = "", Branch* parent = nullptr) : name(n), parentBranch(parent) {}
 
-    void addElf(const std::string& elfName) {
-        if (elf.empty()) {
-            elf = elfName;
-        } else {
-            for (int i = 0; i < numBranches; ++i) {
-                branches[i]->addElf(elfName);
-            }
-        }
-    }
-
-    int countElvesOnSameBranch(const std::string& name) {
-        int count = 0;
-        std::vector<Branch*> nodesToProcess;
-        nodesToProcess.push_back(this);
-
-        while (!nodesToProcess.empty()) {
-            Branch* current = nodesToProcess.back();
-            nodesToProcess.pop_back();
-
-            if (current->elf == name) {
-                count++;
-            }
-
-            for (int i = 0; i < current->numBranches; ++i) {
-                if (current->branches[i] != nullptr) {
-                    nodesToProcess.push_back(current->branches[i]);
-                }
-            }
-        }
-
-        return count;
+    void addSubBranch(Branch* subBranch) {
+        subBranches.push_back(subBranch);
     }
 
     void generateBranches() {
-        int numBigBranches = rand() % 3 + 3; // Генерация от 3 до 5 больших ветвей
+        int numBigBranches = rand() % 3 + 3;
 
-        branches = new Branch*[numBigBranches];
         for (int i = 0; i < numBigBranches; ++i) {
-            branches[i] = new Branch(this, rand() % 2 + 2); // Генерация от 2 до 3 средних ветвей на каждой большой ветви
-        }
-    }
+            std::cout << "Enter branch name (big) " << i + 1 << ": ";
+            std::cin >> name;
+            Branch* bigBranch = new Branch(name, this);
+            subBranches.push_back(bigBranch);
 
-    Branch* findElf(const std::string& name) {
-        if (elf == name) {
-            return this;
-        }
+            int numMidBranches = rand() % 2 + 2;
 
-        Branch* found = nullptr;
-        for (int i = 0; i < numBranches && found == nullptr; ++i) {
-            found = branches[i]->findElf(name);
+            for (int j = 0; j < numMidBranches; ++j) {
+                std::cout << "Enter branch name (middle) " << j + 1 << ": ";
+                std::cin >> name;
+                Branch* midBranch = new Branch(name, bigBranch);
+                bigBranch->addSubBranch(midBranch);
+            }
         }
-
-        return found;
     }
 
     void deleteBranches() {
-        for (int i = 0; i < numBranches; ++i) {
-            if (branches[i] != nullptr) {
-                branches[i]->deleteBranches();
-                delete branches[i];
+        for (int i = 0; i < subBranches.size(); ++i) {
+            for (int j = 0; j < subBranches[i]->subBranches.size(); ++j) {
+                delete subBranches[i]->subBranches[j];
             }
+            delete subBranches[i];
+        }
+        subBranches.clear();
+    }
+
+    void printBranchStructure(int depth = 0) {
+        for (int i = 0; i < subBranches.size(); ++i) {
+            for (int k = 0; k < depth; ++k) {
+                std::cout << "  "; // вывод отступов для визуального представления структуры
+            }
+            std::cout << "Branch: " << subBranches[i]->name << std::endl;
+
+            subBranches[i]->printBranchStructure(depth + 1);
+        }
+    }
+
+    std::string getParentName(const std::string& searchName) {
+        for (int i = 0; i < subBranches.size(); ++i) {
+            if (subBranches[i]->name == searchName) {
+                return searchName;
+            }
+            for (int j = 0; j < subBranches[i]->subBranches.size(); ++j) {
+                if (subBranches[i]->subBranches[j]->name == searchName) {
+                    return subBranches[i]->name;
+                }
+            }
+        }
+        return "";
+    }
+
+    int countMiddleBranches(const std::string& searchName, Branch* root) {
+        std::string parentName = getParentName(searchName);
+
+        if (parentName != "") {
+            int count = 0;
+            for (int i = 0; i < root->subBranches.size(); ++i) {
+                if (root->subBranches[i]->name == parentName) {
+                    for (int j = 0; j < root->subBranches[i]->subBranches.size(); ++j) {
+                        if (root->subBranches[i]->subBranches[j]->name != "None" &&
+                            root->subBranches[i]->subBranches[j]->name != searchName) {
+                            count++;
+                        }
+                    }
+                }
+            }
+            return count;
         }
     }
 };
 
 int main() {
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    std::srand(std::time(nullptr));
 
-    Branch* trees[5];
+    Branch* trees[2];
 
-    for (int i = 0; i < 5; ++i) {
-        trees[i] = new Branch(nullptr, rand() % 3 + 3);
+    for (int i = 0; i < 2; ++i) {
+        trees[i] = new Branch();
+        std::cout << "Tree #" << i + 1 << std::endl;
         trees[i]->generateBranches();
     }
 
-    std::string elfName;
-    while (true) {
-        std::cout << "Enter elf name (or None): ";
-        std::cin >> elfName;
+    // Вывод структуры деревьев
+    for (int i = 0; i < 2; ++i) {
+        std::cout << "Tree " << i + 1 << " structure:" << std::endl;
+        trees[i]->printBranchStructure();
+        std::cout << std::endl;
+    }
 
-        if (elfName == "exit") {
-            break;
-        }
+    std::string searchName;
+    std::cout << "Enter elf name to search: ";
+    std::cin >> searchName;
 
-        for (int i = 0; i < 5; ++i) {
-            trees[i]->addElf(elfName);
+    int count = 0;
+    for (int i = 0; i < 2; ++i) {
+        int branchesCount = trees[i]->countMiddleBranches(searchName, trees[i]);
+        if (branchesCount != -1) {
+            count += branchesCount;
         }
     }
 
-    std::cout << "Enter elf name to find: ";
-    std::string findElfName;
-    std::cin >> findElfName;
-
-    int totalNeighbors = 0;
-    for (int i = 0; i < 5; ++i) {
-        Branch* found = trees[i]->findElf(findElfName);
-        if (found != nullptr) {
-            totalNeighbors += trees[i]->countElvesOnSameBranch(findElfName) - 1;
-        }
+    if (count != 0) {
+        std::cout << "Total number of neighbors: " << count << std::endl;
+    } else {
+        std::cout << "Big branches not found or do not contain middle branches!" << std::endl;
     }
 
-    std::cout << "Total neighbors for " << findElfName << ": " << totalNeighbors << std::endl;
-
-    for (int i = 0; i < 5; ++i) {
-        if (trees[i] != nullptr) {
-            trees[i]->deleteBranches();
-            delete trees[i];
-            trees[i] = nullptr;
-        }
+    // Освобождение памяти
+    for (int i = 0; i < 2; ++i) {
+        trees[i]->deleteBranches();
+        delete trees[i];
     }
 }
