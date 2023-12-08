@@ -4,12 +4,11 @@
 #include <ctime>
 
 class Branch {
-    Branch* parentBranch;
     std::vector<Branch*> subBranches;
     std::string name;
 
 public:
-    Branch(const std::string& n = "", Branch* parent = nullptr) : name(n), parentBranch(parent) {}
+    Branch(const std::string& n = "", Branch* parent = nullptr) : name(n) {}
 
     void addSubBranch(Branch* subBranch) {
         subBranches.push_back(subBranch);
@@ -87,6 +86,7 @@ public:
             }
             return count;
         }
+        return -1;
     }
 };
 
